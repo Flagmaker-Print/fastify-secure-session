@@ -125,7 +125,7 @@ module.exports = fp(function (fastify, options, next) {
 
   fastify.decorate('encodeSecureSession', (session) => {
     const nonce = genNonce()
-    const msg = Buffer.from(JSON.stringify(session[kObj]))
+    const msg = Buffer.from(JSON.stringify(session[kObj], (_, v) => typeof v === 'bigint' ? `${v}n` : v))
 
     const cipher = Buffer.allocUnsafe(msg.length + sodium.crypto_secretbox_MACBYTES)
     sodium.crypto_secretbox_easy(cipher, msg, nonce, key[0])
