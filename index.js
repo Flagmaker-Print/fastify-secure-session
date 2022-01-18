@@ -207,8 +207,7 @@ class Session {
     return this[kObj][key]
   }
 
-  set(key, value, expiry = null) {
-    this.expires = expiry
+  set(key, value, expiry) {
     this.changed = true
     this[kObj][key] = value
   }
