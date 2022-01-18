@@ -139,7 +139,7 @@ module.exports = fp(function (fastify, options, next) {
 
   next()
 
-  function addHooks(fastify, options, next) {
+  function addHooks (fastify, options, next) {
     // the hooks must be registered after fastify-cookie hooks
 
     fastify.addHook('onRequest', (request, reply, next) => {
@@ -151,9 +151,6 @@ module.exports = fp(function (fastify, options, next) {
     })
 
     fastify.addHook('onSend', (request, reply, payload, next) => {
-      /**
-       * @type {Session}
-       */
       const session = request.session
 
       if (!session || !session.changed) {
@@ -175,9 +172,6 @@ module.exports = fp(function (fastify, options, next) {
       }
 
       request.log.trace('fastify-secure-session: setting session')
-      // overiding the expiring time
-      if (session.expires !== null) cookieOptions.expires = session.expires;
-
       reply.setCookie(
         cookieName,
         fastify.encodeSecureSession(session),
@@ -195,40 +189,39 @@ module.exports = fp(function (fastify, options, next) {
 })
 
 class Session {
-  constructor(obj) {
+  constructor (obj) {
     this[kObj] = obj
     this[kCookieOptions] = null
     this.changed = false
     this.deleted = false
-    this.expires = null;
   }
 
-  get(key) {
+  get (key) {
     return this[kObj][key]
   }
 
-  set(key, value, expiry) {
+  set (key, value) {
     this.changed = true
     this[kObj][key] = value
   }
 
-  delete() {
+  delete () {
     this.changed = true
     this.deleted = true
   }
 
-  options(opts) {
+  options (opts) {
     this[kCookieOptions] = opts
   }
 }
 
-function genNonce() {
+function genNonce () {
   const buf = Buffer.allocUnsafe(sodium.crypto_secretbox_NONCEBYTES)
   sodium.randombytes_buf(buf)
   return buf
 }
 
-function ensureBufferKey(k) {
+function ensureBufferKey (k) {
   if (k instanceof Buffer) {
     return k
   }

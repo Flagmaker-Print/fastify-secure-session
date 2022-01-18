@@ -6,7 +6,7 @@ export interface Session {
   changed: boolean;
   deleted: boolean;
   get(key: string): any;
-  set(key: string, value: any, expiry?: Number | Date): void;
+  set(key: string, value: any): void;
   delete(): void;
   options(opts: CookieSerializeOptions): void;
 }
@@ -14,7 +14,7 @@ export interface Session {
 export type SecureSessionPluginOptions = {
   cookie?: CookieSerializeOptions
   cookieName?: string
-} & ({ key: string | Buffer | (string | Buffer)[] } | {
+} & ({key: string | Buffer | (string | Buffer)[]} | {
   secret: string | Buffer,
   salt: string | Buffer
 })
