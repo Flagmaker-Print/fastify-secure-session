@@ -5,6 +5,39 @@ const sodium = require('sodium-native')
 const kObj = Symbol('object')
 const kCookieOptions = Symbol('cookie options')
 
+// allows us to use property getters and setters as well as get and set methods on session object
+const sessionProxyHandler = {
+  get (target, prop) {
+    // Calling functions eg request.session.get('key') or request.session.set('key', 'value')
+    if (typeof target[prop] === 'function') {
+      return new Proxy(target[prop], {
+        apply (applyTarget, thisArg, args) {
+          return Reflect.apply(applyTarget, target, args)
+        }
+      })
+    }
+
+    // accessing own properties, eg request.session.changed
+    if (Object.prototype.hasOwnProperty.call(target, prop)) {
+      return target[prop]
+    }
+
+    // accessing session property
+    return target.get(prop)
+  },
+  set (target, prop, value) {
+    // modifying own properties, eg request.session.changed
+    if (Object.prototype.hasOwnProperty.call(target, prop)) {
+      target[prop] = value
+      return true
+    }
+
+    // modifying session property
+    target.set(prop, value)
+    return true
+  }
+}
+
 module.exports = fp(function (fastify, options, next) {
   let key
   if (options.secret) {
@@ -39,15 +72,19 @@ module.exports = fp(function (fastify, options, next) {
     if (typeof key === 'string') {
       key = Buffer.from(key, 'base64')
     } else if (key instanceof Array) {
-      key = key.map(ensureBufferKey)
+      try {
+        key = key.map(ensureBufferKey)
+      } catch (error) {
+        return next(error)
+      }
     } else if (!(key instanceof Buffer)) {
       return next(new Error('key must be a string or a Buffer'))
     }
 
-    if (!(key instanceof Array) && key.length < sodium.crypto_secretbox_KEYBYTES) {
-      return next(new Error(`key must be at least ${sodium.crypto_secretbox_KEYBYTES} bytes`))
-    } else if (key instanceof Array && key.some(k => k < sodium.crypto_secretbox_KEYBYTES)) {
-      return next(new Error(`key lengths must be at least ${sodium.crypto_secretbox_KEYBYTES} bytes`))
+    if (!(key instanceof Array) && isBufferKeyLengthInvalid(key)) {
+      return next(new Error(`key must be ${sodium.crypto_secretbox_KEYBYTES} bytes`))
+    } else if (key instanceof Array && key.every(isBufferKeyLengthInvalid)) {
+      return next(new Error(`key lengths must be ${sodium.crypto_secretbox_KEYBYTES} bytes`))
     }
   }
 
@@ -116,12 +153,12 @@ module.exports = fp(function (fastify, options, next) {
       return null
     }
 
-    const session = new Session(JSON.parse(msg))
+    const session = new Proxy(new Session(JSON.parse(msg)), sessionProxyHandler)
     session.changed = signingKeyRotated
     return session
   })
 
-  fastify.decorate('createSecureSession', (data) => new Session(data))
+  fastify.decorate('createSecureSession', (data) => new Proxy(new Session(data), sessionProxyHandler))
 
   fastify.decorate('encodeSecureSession', (session) => {
     const nonce = genNonce()
@@ -134,18 +171,19 @@ module.exports = fp(function (fastify, options, next) {
   })
 
   fastify
-    .register(require('fastify-cookie'))
+    .register(require('@fastify/cookie'))
     .register(fp(addHooks))
 
   next()
 
   function addHooks (fastify, options, next) {
-    // the hooks must be registered after fastify-cookie hooks
+    // the hooks must be registered after @fastify/cookie hooks
 
     fastify.addHook('onRequest', (request, reply, next) => {
       const cookie = request.cookies[cookieName]
       const result = fastify.decodeSecureSession(cookie, request.log)
-      request.session = result || new Session({})
+
+      request.session = new Proxy((result || new Session({})), sessionProxyHandler)
 
       next()
     })
@@ -184,8 +222,8 @@ module.exports = fp(function (fastify, options, next) {
     next()
   }
 }, {
-  fastify: '3.x',
-  name: 'fastify-secure-session'
+  fastify: '4.x',
+  name: '@fastify/secure-session'
 })
 
 class Session {
@@ -213,6 +251,10 @@ class Session {
   options (opts) {
     this[kCookieOptions] = opts
   }
+
+  data () {
+    return this[kObj]
+  }
 }
 
 function genNonce () {
@@ -231,4 +273,10 @@ function ensureBufferKey (k) {
   }
 
   return Buffer.from(k, 'base64')
+}
+
+function isBufferKeyLengthInvalid (k) {
+  // the key should be strictly equals to sodium.crypto_secretbox_KEYBYTES
+  // or this will result in a runtime error when encoding the session
+  return k.length !== sodium.crypto_secretbox_KEYBYTES
 }

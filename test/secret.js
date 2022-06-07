@@ -1,6 +1,71 @@
 'use strict'
 
+const sodium = require('sodium-native')
 const tap = require('tap')
+
+tap.test('throws when secret is less than 32 bytes', async function (t) {
+  t.plan(2)
+
+  const fastify = require('fastify')({
+    logger: false
+  })
+  t.teardown(fastify.close.bind(fastify))
+
+  await fastify.register(require('../'), {
+    secret: 'a'.repeat(31)
+  }).after((err) => {
+    t.type(err, Error)
+    t.equal(err.message, 'secret must be at least 32 bytes')
+  })
+})
+
+tap.test('not throws when secret is greater than or equal to 32 bytes', async function (t) {
+  t.plan(1)
+
+  const fastify = require('fastify')({
+    logger: false
+  })
+  t.teardown(fastify.close.bind(fastify))
+
+  await fastify.register(require('../'), {
+    secret: 'a'.repeat(32)
+  }).after((err) => {
+    t.error(err)
+  })
+})
+
+tap.test('throws when salt is less than sodium.crypto_pwhash_SALTBYTES', async function (t) {
+  t.plan(2)
+
+  const fastify = require('fastify')({
+    logger: false
+  })
+  t.teardown(fastify.close.bind(fastify))
+
+  await fastify.register(require('../'), {
+    secret: 'a'.repeat(32),
+    salt: 'a'.repeat(sodium.crypto_pwhash_SALTBYTES - 1)
+  }).after((err) => {
+    t.type(err, Error)
+    t.equal(err.message, `salt must be length ${sodium.crypto_pwhash_SALTBYTES}`)
+  })
+})
+
+tap.test('not throws when salt is greater than or equal to sodium.crypto_pwhash_SALTBYTES', async function (t) {
+  t.plan(1)
+
+  const fastify = require('fastify')({
+    logger: false
+  })
+  t.teardown(fastify.close.bind(fastify))
+
+  await fastify.register(require('../'), {
+    secret: 'a'.repeat(32),
+    salt: 'a'.repeat(sodium.crypto_pwhash_SALTBYTES)
+  }).after((err) => {
+    t.error(err)
+  })
+})
 
 tap.test('using secret without salt', function (t) {
   const fastify = require('fastify')({

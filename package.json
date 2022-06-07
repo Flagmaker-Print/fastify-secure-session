@@ -1,11 +1,11 @@
 {
-  "name": "fastify-secure-session",
-  "version": "3.0.0",
+  "name": "@fastify/secure-session",
+  "version": "5.1.1",
   "description": "Create a secure stateless cookie session for Fastify",
   "main": "index.js",
   "types": "index.d.ts",
   "bin": {
-    "fastify-secure-session": "genkey.js"
+    "@fastify/secure-session": "genkey.js"
   },
   "scripts": {
     "test": "standard && tap test/*.js && tsd"
@@ -28,17 +28,20 @@
   "homepage": "https://github.com/fastify/fastify-secure-session#readme",
   "devDependencies": {
     "@types/node": "^17.0.2",
-    "cookie": "^0.4.0",
-    "fastify": "^3.0.0",
+    "cookie": "^0.5.0",
+    "fastify": "^4.0.0-rc.2",
     "pre-commit": "^1.2.2",
-    "standard": "^16.0.1",
-    "tap": "^15.0.2",
-    "tsd": "^0.18.0",
+    "standard": "^17.0.0",
+    "tap": "^16.1.0",
+    "tsd": "^0.20.0",
     "typescript": "^4.0.2"
   },
   "dependencies": {
-    "fastify-cookie": "^5.0.0",
+    "@fastify/cookie": "^6.0.0",
     "fastify-plugin": "^3.0.0",
     "sodium-native": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,14 +1,19 @@
 /// <reference types="node" />
-import { CookieSerializeOptions } from "fastify-cookie";
+import { CookieSerializeOptions } from "@fastify/cookie";
 import { FastifyPlugin, FastifyLoggerInstance } from "fastify";
 
-export interface Session {
+export type Session = Partial<SessionData> & {
   changed: boolean;
   deleted: boolean;
-  get(key: string): any;
-  set(key: string, value: any): void;
+  get<Key extends keyof SessionData>(key: Key): SessionData[Key] | undefined;
+  set<Key extends keyof SessionData>(key: Key, value: SessionData[Key] | undefined): void;
+  data(): SessionData | undefined;
   delete(): void;
   options(opts: CookieSerializeOptions): void;
+}
+
+export interface SessionData {
+  [key: string]: any;
 }
 
 export type SecureSessionPluginOptions = {
